@@ -13,7 +13,7 @@ data = (
     .load("s3://stock-analysis-praghadeesh/raw/stock_analysis-main/*.csv")
 )
 
-# The Symbol data read 
+# The Symbol data is read 
 symbol_data = (
     spark.read.format("csv")
     .options(header=True, inferSchema=True)
@@ -45,6 +45,6 @@ stock_data_cleaned = (
 
 
 # Stock Data and Symbol Data is written as Parquet
-
+# Stock Data is partitioned based on stock_symbol
 stock_data_cleaned.write.partitionBy("stock_symbol").format("parquet").mode("overwrite").save("s3://stock-analysis-praghadeesh/base/processed/stock_data")
 symbol_data.write.format("parquet").mode("overwrite").save("s3://stock-analysis-praghadeesh/base/processed/symbol_data")
