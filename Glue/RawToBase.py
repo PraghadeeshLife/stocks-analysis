@@ -46,6 +46,5 @@ stock_data_cleaned = (
 
 # Stock Data and Symbol Data is written as Parquet
 
-stock_data_cleaned.write.format("parquet").mode("overwrite").save("s3://stock-analysis-praghadeesh/base/processed/stock_data")
+stock_data_cleaned.write.partitionBy("stock_symbol").format("parquet").mode("overwrite").save("s3://stock-analysis-praghadeesh/base/processed/stock_data")
 symbol_data.write.format("parquet").mode("overwrite").save("s3://stock-analysis-praghadeesh/base/processed/symbol_data")
-
