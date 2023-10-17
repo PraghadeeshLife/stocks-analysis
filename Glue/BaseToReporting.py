@@ -5,12 +5,13 @@ from pyspark.sql.window import Window
 from pyspark.sql.types import *
 from datetime import datetime
 
+# Creating SparkSession and naming the app as BaseToReporting
 spark = SparkSession.builder.appName("BaseToReporting").getOrCreate()
 
+# Reading the processed data
 stock_data_cleaned = spark.read.format("parquet").load("s3://stock-analysis-praghadeesh/base/processed/stock_data")
 symbol_data = spark.read.format("parquet").load("s3://stock-analysis-praghadeesh/base/processed/symbol_data")
 
-# The data though read by inferSchema it is read as String, and is converted to appropriate data type manually
 # Broadcasting the Smaller DF - Symbol Data so that the data is stored in all the worker nodes and reduces shuffle operation across nodes reducing Network I/O
 joined_data = (
     stock_data_cleaned.join(broadcast(symbol_data), on="stock_symbol", how="left")
@@ -21,6 +22,7 @@ joined_data.persist()
 
 joined_data.count()
 
+# Function to Calculate the All time summary
 def all_time_summary_df():
       ats_df = joined_data.groupBy("Sector").agg(
                     avg("open").alias("AVG_OPEN_PRICE"),
@@ -31,6 +33,7 @@ def all_time_summary_df():
                 )
       return ats_df
   
+# Function to Calculate the summary for specified time
 def specific_time_summary_df(start_date, end_date, sectors_interested):
     start_date = datetime.strptime(start_date, "%Y-%m-%d")
     end_date = datetime.strptime(end_date, "%Y-%m-%d")
@@ -49,6 +52,7 @@ def specific_time_summary_df(start_date, end_date, sectors_interested):
                             )
     return sts_grouped
   
+# Function to Calculate the detailed summary for specified time  
 def specific_time_detailed_df(start_date, end_date, sectors_interested):
     start_date = datetime.strptime(start_date, "%Y-%m-%d")
     end_date = datetime.strptime(end_date, "%Y-%m-%d")
@@ -67,17 +71,18 @@ def specific_time_detailed_df(start_date, end_date, sectors_interested):
                     )
     return std_grouped
 
+
+# All the Data is then written as parquet in the reporting directory
 all_time_summary_df().write.format("parquet").mode("overwrite").save("s3://stock-analysis-praghadeesh/reporting/all_time_summary")
 
+# Specific Time Summary DF
 start_date = "2021-01-01"
 end_date = "2021-05-26"
 sectors_interested = ["FINANCE", "TECHNOLOGY"]
-
 specific_time_summary_df(start_date, end_date, sectors_interested).write.format("parquet").mode("overwrite").save("s3://stock-analysis-praghadeesh/reporting/specific_time_summary")
 
-
+# Specific Time Detailed DF
 start_date = "2021-01-01"
 end_date = "2021-05-26"
 sectors_interested = ["TECHNOLOGY"]
 specific_time_detailed_df(start_date, end_date, sectors_interested).write.format("parquet").mode("overwrite").save("s3://stock-analysis-praghadeesh/reporting/specific_time_detailed")
-
