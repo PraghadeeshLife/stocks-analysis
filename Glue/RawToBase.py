@@ -48,11 +48,14 @@ stock_data_cleaned = (
 # Checking for Mandatory Columns in both the Dataframes
 stock_data_ge = ge.dataset.SparkDFDataset(stock_data_cleaned)
 symbol_data_ge = ge.dataset.SparkDFDataset(symbol_data)
+
+# Stock Data Check
 MANDATORY_COLUMNS = ['timestamp', 'open', 'high', 'low', 'close', 'volume', 'stock_symbol']
 for column in MANDATORY_COLUMNS:
     assert stock_data_ge.expect_column_to_exist(column).success, f"Mandatory column {column} does not exist: FAILED"
     print(f"STOCK DATA : Column {column} exists : PASSED")
 
+# Symbol Data Check
 MANDATORY_COLUMNS = ['stock_symbol', 'Name', 'Country', 'Sector', 'Industry', 'Address']
 for column in MANDATORY_COLUMNS:
     assert symbol_data_ge.expect_column_to_exist(column).success, f"Mandatory column {column} does not exist: FAILED"
@@ -62,6 +65,6 @@ for column in MANDATORY_COLUMNS:
 
 
 # Stock Data and Symbol Data is written as Parquet
-
+# Stock Data is partitioned by stock_symbol, for faster querying and aggregations on the table at a later point of time
 stock_data_cleaned.write.partitionBy("stock_symbol").format("parquet").mode("overwrite").save("s3://stock-analysis-praghadeesh/base/processed/stock_data")
 symbol_data.write.format("parquet").mode("overwrite").save("s3://stock-analysis-praghadeesh/base/processed/symbol_data")
