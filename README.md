@@ -113,8 +113,11 @@ Ephemeral Storage: 512 MB
 
 
 A Working flow of the fully functional pipeline - AWS Step Functions
+![stepfunctions_graph (2)](https://github.com/PraghadeeshLife/stocks-analysis/assets/102030901/ddd5df0f-3bd5-4534-9005-c23feee4d454)
 
+![stepfunctions_graph (3)](https://github.com/PraghadeeshLife/stocks-analysis/assets/102030901/e4f20978-7d7c-4720-af64-7c36868681d1)
 
+![stepfunctions_graph (4)](https://github.com/PraghadeeshLife/stocks-analysis/assets/102030901/bef69847-bda3-4427-ad00-8c8fc8e46bae)
 
 
 
