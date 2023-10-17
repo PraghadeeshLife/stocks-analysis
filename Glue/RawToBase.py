@@ -3,17 +3,19 @@ from pyspark.sql import SparkSession
 from pyspark.sql.functions import *
 from pyspark.sql.window import Window
 from pyspark.sql.types import *
+import great_expectations as ge
 
+# Creating the SparkSession and setting the app name
 spark = SparkSession.builder.appName("RawToBase").getOrCreate()
 
-# The Raw data read for all the Stocks Given
+# The Raw data is read as it is and later filtered to have only the stock data
 data = (
     spark.read.format("csv")
     .options(header=True, inferSchema=True)
     .load("s3://stock-analysis-praghadeesh/raw/stock_analysis-main/*.csv")
 )
 
-# The Symbol data is read 
+# The Symbol data is read directly with the full path
 symbol_data = (
     spark.read.format("csv")
     .options(header=True, inferSchema=True)
@@ -27,6 +29,7 @@ stock_data = data.withColumn("input_file", input_file_name()).where(
 )
 
 # Cleaning the Stock Data to get the required Stock Symbol extracted from the file name
+# Casting the Datatypes appropritely as all the columns are String
 stock_data_cleaned = (
     stock_data.withColumn("timestamp", col("timestamp").cast(DateType()))
     .withColumn("open", col("open").cast(DoubleType()))
@@ -40,11 +43,25 @@ stock_data_cleaned = (
     .na.fill(0, subset=['open', 'high', 'low', 'close', 'volume']) # Filling the data as 0 if there are any nulls on the subset
 )
 
+
 # DQ Checks
-# Data Type Check is redundant here as we have Casted the Data Types explicitly in Previous steps
+# Checking for Mandatory Columns in both the Dataframes
+stock_data_ge = ge.dataset.SparkDFDataset(stock_data_cleaned)
+symbol_data_ge = ge.dataset.SparkDFDataset(symbol_data)
+MANDATORY_COLUMNS = ['timestamp', 'open', 'high', 'low', 'close', 'volume', 'stock_symbol']
+for column in MANDATORY_COLUMNS:
+    assert stock_data_ge.expect_column_to_exist(column).success, f"Mandatory column {column} does not exist: FAILED"
+    print(f"STOCK DATA : Column {column} exists : PASSED")
+
+MANDATORY_COLUMNS = ['stock_symbol', 'Name', 'Country', 'Sector', 'Industry', 'Address']
+for column in MANDATORY_COLUMNS:
+    assert symbol_data_ge.expect_column_to_exist(column).success, f"Mandatory column {column} does not exist: FAILED"
+    print(f"SYMBOL DATA : Column {column} exists : PASSED")
+    
+# Data Type Check and Nulls is redundant here as we have Casted the Data Types explicitly and filled the na as 0s (there weren't any nulls) in Previous steps
 
 
 # Stock Data and Symbol Data is written as Parquet
-# Stock Data is partitioned based on stock_symbol
+
 stock_data_cleaned.write.partitionBy("stock_symbol").format("parquet").mode("overwrite").save("s3://stock-analysis-praghadeesh/base/processed/stock_data")
 symbol_data.write.format("parquet").mode("overwrite").save("s3://stock-analysis-praghadeesh/base/processed/symbol_data")
